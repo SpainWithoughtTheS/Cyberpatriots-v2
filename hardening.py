@@ -122,9 +122,7 @@ def enable_daily_updates():
 
 # Main function to orchestrate the hardening process
 def main():
-    # Remove unauthorized users
-    unauthorized_users = ['rowan', 'mmouse', 'lgates', 'vkinbott']  # Modify based on your setup
-    remove_unauthorized_users(unauthorized_users)
+   
     
     # Enforce password policies
     enforce_password_policy()
