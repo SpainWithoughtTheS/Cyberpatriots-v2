@@ -21,11 +21,37 @@ def secure_root_login():
     run_command("systemctl restart sshd")
 
 def disable_guest_user():
-    """Disable the guest user in LightDM."""
-    print("Disabling guest user...")
-    with open("/etc/lightdm/lightdm.conf", "a") as f:
-        f.write("allow-guest=false\n")
-    run_command("systemctl restart lightdm")
+    """Disable the guest user based on the display manager."""
+    try:
+        display_manager = run_command("cat /etc/X11/default-display-manager", exit_on_fail=False).strip()
+        
+        if "lightdm" in display_manager:
+            print("Disabling guest user for lightdm...")
+            if not os.path.exists("/etc/lightdm/lightdm.conf"):
+                os.makedirs("/etc/lightdm/", exist_ok=True)
+                with open("/etc/lightdm/lightdm.conf", "a") as f:
+                    f.write("[SeatDefaults]\nallow-guest=false\n")
+            run_command("systemctl restart lightdm")
+
+        elif "gdm3" in display_manager:
+            print("Disabling guest user for gdm3...")
+            run_command("mkdir -p /etc/gdm3/")
+            with open("/etc/gdm3/custom.conf", "a") as f:
+                f.write("[daemon]\nAllowGuest=false\n")
+            run_command("systemctl restart gdm3")
+
+        elif "sddm" in display_manager:
+            print("Disabling guest user for sddm...")
+            run_command("mkdir -p /etc/sddm/")
+            with open("/etc/sddm.conf", "a") as f:
+                f.write("[Users]\nAllowGuest=false\n")
+            run_command("systemctl restart sddm")
+
+        else:
+            print("Unknown display manager. Please disable guest manually.")
+
+    except Exception as e:
+        print(f"Failed to disable guest user: {e}")
 
 def check_uid_0_users():
     """Check for UID 0 users and log them."""
