@@ -2,8 +2,8 @@ import os
 import subprocess
 import sys
 
+# Helper function to run system commands
 def run_command(command, exit_on_fail=True):
-    """Run a shell command and check for success."""
     try:
         result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         print(f"Command succeeded: {command}")
@@ -14,146 +14,143 @@ def run_command(command, exit_on_fail=True):
             sys.exit(1)
         return None
 
-def secure_root_login():
-    """Secure SSH root login by setting PermitRootLogin to no."""
-    print("Securing root login...")
-    run_command("sed -i 's/^#PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config")
-    run_command("systemctl restart sshd")
+# Disable Unauthorized Users
+def remove_unauthorized_users(users_to_remove):
+    """Remove unauthorized users"""
+    for user in users_to_remove:
+        print(f"Removing unauthorized user: {user}")
+        run_command(f"sudo userdel -r {user}")
+        run_command(f"sudo groupdel {user}")
 
-def disable_guest_user():
-    """Disable the guest user based on the display manager."""
-    try:
-        display_manager = run_command("cat /etc/X11/default-display-manager", exit_on_fail=False).strip()
-        
-        if "lightdm" in display_manager:
-            print("Disabling guest user for lightdm...")
-            if not os.path.exists("/etc/lightdm/lightdm.conf"):
-                os.makedirs("/etc/lightdm/", exist_ok=True)
-                with open("/etc/lightdm/lightdm.conf", "a") as f:
-                    f.write("[SeatDefaults]\nallow-guest=false\n")
-            run_command("systemctl restart lightdm")
-
-        elif "gdm3" in display_manager:
-            print("Disabling guest user for gdm3...")
-            run_command("mkdir -p /etc/gdm3/")
-            with open("/etc/gdm3/custom.conf", "a") as f:
-                f.write("[daemon]\nAllowGuest=false\n")
-            run_command("systemctl restart gdm3")
-
-        elif "sddm" in display_manager:
-            print("Disabling guest user for sddm...")
-            run_command("mkdir -p /etc/sddm/")
-            with open("/etc/sddm.conf", "a") as f:
-                f.write("[Users]\nAllowGuest=false\n")
-            run_command("systemctl restart sddm")
-
-        else:
-            print("Unknown display manager. Please disable guest manually.")
-
-    except Exception as e:
-        print(f"Failed to disable guest user: {e}")
-
-def check_uid_0_users():
-    """Check for UID 0 users and log them."""
-    print("Checking for UID 0 users...")
-    uid_0_users = run_command("awk -F: '($3 == 0) {print $1}' /etc/passwd")
-    with open("/root/uid_0_users.txt", "w") as f:
-        f.write(uid_0_users)
-
+# Enforce password policies (length, complexity, etc.)
 def enforce_password_policy():
-    """Enforce password policies for expiration, complexity, and lockout."""
     print("Enforcing password policies...")
-    # Password expiration
-    run_command("sed -i 's/^PASS_MIN_DAYS.*/PASS_MIN_DAYS 7/' /etc/login.defs")
-    run_command("sed -i 's/^PASS_MAX_DAYS.*/PASS_MAX_DAYS 90/' /etc/login.defs")
-    run_command("sed -i 's/^PASS_WARN_AGE.*/PASS_WARN_AGE 14/' /etc/login.defs")
+    # Ensure password hashing algorithm is secure
+    run_command("sudo sed -i '/pam_unix.so/ s/$/ sha512/' /etc/pam.d/common-password")
+    
+    # Enforce minimum password length and password complexity
+    run_command("sudo sed -i '/pam_unix.so/ s/$/ minlen=10/' /etc/pam.d/common-password")
+    run_command("sudo apt-get install -y libpam-cracklib")
+    run_command("sudo sed -i '/pam_cracklib.so/ s/$/ ucredit=-1 lcredit=-1 dcredit=-1 ocredit=-1/' /etc/pam.d/common-password")
+    
+    # Remember previous passwords
+    run_command("sudo sed -i '/pam_unix.so/ s/$/ remember=5/' /etc/pam.d/common-password")
 
-    # Password complexity
-    run_command("sed -i '/pam_unix.so/ s/$/ minlen=8 remember=5/' /etc/pam.d/common-password")
-    if not run_command("grep -q 'pam_cracklib.so' /etc/pam.d/common-password", exit_on_fail=False):
-        run_command("apt-get install -y libpam-cracklib")
-        run_command("echo 'password requisite pam_cracklib.so ucredit=-1 lcredit=-1 dcredit=-1 ocredit=-1' >> /etc/pam.d/common-password")
+# Disable root login in SSH and secure SSH settings
+def secure_ssh_config():
+    print("Securing SSH configuration...")
+    # Disable root login
+    run_command("sudo sed -i 's/#PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config")
+    
+    # Disable key-based authentication (if required)
+    run_command("sudo sed -i 's/#PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config")
+    
+    # Ensure LogLevel is not set to QUIET
+    run_command("sudo sed -i 's/#LogLevel INFO/LogLevel VERBOSE/' /etc/ssh/sshd_config")
+    
+    # Disallow empty passwords
+    run_command("sudo sed -i 's/#PermitEmptyPasswords yes/PermitEmptyPasswords no/' /etc/ssh/sshd_config")
+    
+    # Disable processing of client environment variables
+    run_command("sudo sed -i 's/#PermitUserEnvironment yes/PermitUserEnvironment no/' /etc/ssh/sshd_config")
+    
+    run_command("sudo systemctl restart sshd")
 
-    # Lockout policy
-    if not run_command("grep -q 'pam_tally2.so' /etc/pam.d/common-auth", exit_on_fail=False):
-        run_command("echo 'auth required pam_tally2.so deny=5 unlock_time=1800' >> /etc/pam.d/common-auth")
+# Disable IPv4 forwarding and enable Address Space Layout Randomization (ASLR)
+def network_security_hardening():
+    print("Disabling IPv4 forwarding and enabling ASLR...")
+    # Disable IPv4 forwarding
+    run_command("echo 0 | sudo tee /proc/sys/net/ipv4/ip_forward")
+    
+    # Enable Address Space Layout Randomization
+    run_command("sudo sysctl -w kernel.randomize_va_space=2")
 
-def secure_ports():
-    """Check open ports and close unauthorized ones."""
-    print("Checking and securing open ports...")
-    open_ports = run_command("ss -ln")
-    with open("/root/open_ports.txt", "w") as f:
-        f.write(open_ports)
-    ports_to_close = [line for line in open_ports.splitlines() if not "127.0.0.1" in line]
-    for port in ports_to_close:
-        port_num = port.split()[4].split(":")[-1]
-        print(f"Closing port {port_num}...")
-        process = run_command(f"lsof -i :{port_num} | awk '{{print $1}}' | tail -n 1")
-        location = run_command(f"whereis {process.strip()} | awk '{{print $2}}'")
-        package = run_command(f"dpkg -S {location.strip()} | cut -d: -f1")
-        run_command(f"apt-get purge -y {package.strip()}")
-        run_command("ss -l")
+# Enable UFW and AppArmor services
+def enable_firewall_apparmor():
+    print("Enabling UFW and AppArmor...")
+    # Enable UFW
+    run_command("sudo ufw enable")
+    run_command("sudo ufw logging on")
+    
+    # Enable AppArmor
+    run_command("sudo systemctl enable apparmor")
+    run_command("sudo systemctl start apparmor")
 
-def enable_firewall():
-    """Enable the UFW firewall."""
-    print("Enabling firewall...")
-    run_command("ufw enable")
+# Configure Seafile services (if installed)
+def configure_seafile():
+    print("Configuring Seafile services...")
+    # Secure Seahub password policies
+    seafile_settings = [
+        'SECURE_CookiesHttpOnly = True',
+        'SECURE_CookiesSecure = True',
+        'PASSWORD_MIN_LENGTH = 10',
+        'PASSWORD_MIN_DIGITS = 1',
+        'PASSWORD_MIN_UPPER = 1',
+        'PASSWORD_MIN_LOWER = 1',
+        'PASSWORD_MIN_SYMBOLS = 1',
+        'SESSION_EXPIRE_AT_BROWSER_CLOSE = True',
+        'LOG_FILES_ACCESS = True',
+    ]
+    seafile_conf = "/path/to/seahub/settings.py"  # Replace with actual path
+    for setting in seafile_settings:
+        run_command(f"echo '{setting}' | sudo tee -a {seafile_conf}")
 
-def enable_syn_cookies():
-    """Enable SYN cookies protection."""
-    print("Enabling SYN cookies protection...")
-    run_command("sysctl -w net.ipv4.tcp_syncookies=1")
+# Disable unnecessary services and remove prohibited software
+def remove_unnecessary_services_and_software():
+    print("Removing unnecessary services and prohibited software...")
+    prohibited_software = ['sucrack', 'changeme', 'unworkable', 'apache2', 'pvpgn']
+    for software in prohibited_software:
+        run_command(f"sudo apt-get purge -y {software}")
 
-def disable_ipv6():
-    """Disable IPv6 (optional)."""
-    print("Disabling IPv6...")
-    run_command("echo 'net.ipv6.conf.all.disable_ipv6 = 1' >> /etc/sysctl.conf")
+# Apply additional system hardening (disabling SUID, coredumps, etc.)
+def additional_system_hardening():
+    print("Applying additional system hardening...")
+    # Ensure no SUID on binaries like 'date'
+    run_command("sudo chmod -s /bin/date")
+    
+    # Disable coredumps for sudo
+    run_command("echo 'CoredumpDisable=yes' | sudo tee -a /etc/systemd/system.conf")
+    
+    # Restrict perf_event_open()
+    run_command("echo 'kernel.perf_event_paranoid=3' | sudo tee -a /etc/sysctl.conf")
     run_command("sysctl -p")
 
-def disable_ip_forwarding():
-    """Disable IP forwarding."""
-    print("Disabling IP forwarding...")
-    run_command("echo '0' > /proc/sys/net/ipv4/ip_forward")
+# Run daily updates
+def enable_daily_updates():
+    print("Enabling daily updates...")
+    run_command("sudo sed -i 's/^APT::Periodic::Update-Package-Lists.*/APT::Periodic::Update-Package-Lists \"1\";/' /etc/apt/apt.conf.d/10periodic")
 
-def prevent_ip_spoofing():
-    """Prevent IP spoofing."""
-    print("Preventing IP spoofing...")
-    run_command("echo 'nospoof on' >> /etc/host.conf")
-
-def update_system():
-    """Run system updates and security patches."""
-    print("Updating system...")
-    run_command("apt-get update")
-    run_command("apt-get upgrade -y")
-
-def check_for_hacking_tools():
-    """Check for hacking tools or suspicious packages."""
-    print("Checking for hacking tools...")
-    hacking_tools = run_command("dpkg --get-selections | grep -E 'john|hydra|medusa|ophcrack'")
-    if hacking_tools:
-        with open("/root/suspicious_tools.txt", "w") as f:
-            f.write(hacking_tools)
-
-def check_service_status():
-    """Check the status of all services."""
-    print("Checking service status...")
-    services = run_command("service --status-all")
-    with open("/root/service_status.txt", "w") as f:
-        f.write(services)
-
-# Main script execution
-if __name__ == "__main__":
-    secure_root_login()
-    disable_guest_user()
-    check_uid_0_users()
+# Main function to orchestrate the hardening process
+def main():
+    # Remove unauthorized users
+    unauthorized_users = ['rowan', 'mmouse', 'lgates', 'vkinbott']  # Modify based on your setup
+    remove_unauthorized_users(unauthorized_users)
+    
+    # Enforce password policies
     enforce_password_policy()
-    secure_ports()
-    enable_firewall()
-    enable_syn_cookies()
-    disable_ipv6()
-    disable_ip_forwarding()
-    prevent_ip_spoofing()
-    update_system()
-    check_for_hacking_tools()
-    check_service_status()
-    print("Linux hardening completed successfully.")
+    
+    # Secure SSH
+    secure_ssh_config()
+    
+    # Network security hardening
+    network_security_hardening()
+    
+    # Enable firewall and AppArmor
+    enable_firewall_apparmor()
+    
+    # Configure Seafile (if installed)
+    configure_seafile()
+    
+    # Remove unnecessary services and prohibited software
+    remove_unnecessary_services_and_software()
+    
+    # Apply additional hardening
+    additional_system_hardening()
+    
+    # Enable daily updates
+    enable_daily_updates()
+    
+    print("System hardening completed.")
+
+if __name__ == "__main__":
+    main()
