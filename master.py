@@ -1,131 +1,143 @@
-#!/bin/bash
+import os
+import subprocess
 
-# Function to check installed services
-check_services() {
-    echo "Checking for installed services..."
-    service --status-all | grep -E '\[ \+ \]|\[ - \]' > installed_services.txt
-    echo "Installed services saved to installed_services.txt"
-}
+# Function to remove unauthorized users
+def remove_unauthorized_users():
+    print("Removing unauthorized users...")
+    users_to_remove = ["user1", "user2"]  # Add users to remove here
+    for user in users_to_remove:
+        subprocess.run(["sudo", "userdel", user])
+    print("Unauthorized users removed.")
 
-# Function to disable unnecessary services
-disable_unnecessary_services() {
-    echo "Disabling unnecessary services..."
-    # Add specific services that you know should be disabled.
-    services=("bluetooth" "cups" "avahi-daemon" "rpcbind")
-    for service in "${services[@]}"; do
-      echo "Disabling $service..."
-      sudo systemctl disable $service
-      sudo systemctl stop $service
-    done
-    echo "Unnecessary services disabled."
-}
+# Function to remove certain admin users
+def remove_admin_users():
+    print("Removing certain admin users...")
+    admins_to_remove = ["admin1", "admin2"]  # Add admin users to remove here
+    for admin in admins_to_remove:
+        subprocess.run(["sudo", "deluser", admin, "sudo"])
+    print("Certain admin users removed.")
 
-# Function to change file permissions for sensitive files
-secure_file_permissions() {
-    echo "Securing permissions for /etc/passwd and /etc/shadow..."
-    sudo chmod 644 /etc/passwd
-    sudo chmod 600 /etc/shadow
-    echo "Permissions have been secured."
-}
+# Function to spot root impostors
+def spot_root_impostors():
+    print("Spotting root impostors...")
+    # Checking for users with UID 0 except root
+    subprocess.run(["awk", "-F:", '($3 == "0" && $1 != "root") {print}', "/etc/passwd"])
+    print("Root impostors spotted.")
 
-# Function to check password expiration policy
-check_password_expiration() {
-    echo "Checking password expiration settings..."
-    grep PASS_MAX_DAYS /etc/login.defs
-    grep PASS_MIN_DAYS /etc/login.defs
-    grep PASS_WARN_AGE /etc/login.defs
-    echo "Please verify that the output matches your security policy."
-}
+# Function to configure secure default password hashing algorithm
+def configure_password_hashing():
+    print("Configuring secure password hashing...")
+    subprocess.run(["sudo", "sed", "-i", 's/^PASS_MAX_DAYS.*/PASS_MAX_DAYS 90/', "/etc/login.defs"])
+    print("Password hashing algorithm secured.")
 
-# Function to audit SUID/SGID binaries
-audit_suid_sgid() {
-    echo "Auditing SUID/SGID binaries..."
-    find / -perm /6000 -type f -exec ls -lh {} \; 2>/dev/null | tee suid_sgid_audit.txt
-    echo "Audit complete. Results saved to suid_sgid_audit.txt"
-}
+# Function to enable extra dictionary-based password strength checks
+def enable_dictionary_password_checks():
+    print("Enabling dictionary-based password strength checks...")
+    subprocess.run(["sudo", "apt-get", "install", "-y", "cracklib-runtime"])
+    subprocess.run(["sudo", "sed", "-i", 's/# dictcheck/dictcheck/', "/etc/pam.d/common-password"])
+    print("Password strength checks enabled.")
 
-# Function to check for open ports
-check_open_ports() {
-    echo "Checking for open ports..."
-    sudo netstat -tuln | tee open_ports.txt
-    echo "Open ports saved to open_ports.txt"
-}
+# Function to enforce password length
+def enforce_min_password_length():
+    print("Enforcing minimum password length...")
+    subprocess.run(["sudo", "sed", "-i", 's/pam_unix.so.*/pam_unix.so minlen=12/', "/etc/pam.d/common-password"])
+    print("Minimum password length enforced.")
 
-# Function to audit user accounts and sudo privileges
-audit_users() {
-    echo "Auditing user accounts and sudo privileges..."
-    echo "Users with UID greater than 1000:"
-    awk -F: '$3 >= 1000 {print $1}' /etc/passwd
-    echo "Users with sudo privileges:"
-    getent group sudo
-    echo "Please review these users to ensure they are legitimate."
-}
+# Function to disable IP forwarding
+def disable_ipv_forwarding():
+    print("Disabling IPv forwarding...")
+    subprocess.run(["sudo", "sysctl", "-w", "net.ipv4.ip_forward=0"])
+    print("IPv forwarding disabled.")
 
-# Function to update and patch the system
-update_system() {
-    echo "Updating and upgrading the system..."
-    sudo apt update && sudo apt upgrade -y
-    echo "System is up-to-date."
-}
+# Function to enable Address Space Layout Randomization (ASLR)
+def enable_aslr():
+    print("Enabling ASLR...")
+    subprocess.run(["sudo", "sysctl", "-w", "kernel.randomize_va_space=2"])
+    print("ASLR enabled.")
 
-# Function to configure firewall
-configure_firewall() {
-    echo "Configuring firewall..."
-    sudo ufw enable
-    sudo ufw default deny incoming
-    sudo ufw default allow outgoing
-    sudo ufw allow ssh
-    sudo ufw allow http
-    sudo ufw allow https
-    echo "Firewall configured with basic rules."
-}
+# Function to disable new kernels from booting alongside the current one
+def disable_new_kernel_boot():
+    print("Disabling new kernel boot...")
+    subprocess.run(["sudo", "grub-editenv", "/boot/grub/grubenv", "set", "boot_once=true"])
+    print("New kernel boot disabled.")
 
-# Function to monitor logs for suspicious activity
-monitor_logs() {
-    echo "Monitoring /var/log/auth.log for unusual activity..."
-    tail -f /var/log/auth.log
-}
+# Function to restrict perf_event_open to processes with CAP_PERFMON
+def restrict_perf_event_open():
+    print("Restricting access to CPU performance events...")
+    subprocess.run(["sudo", "sysctl", "-w", "kernel.perf_event_paranoid=3"])
+    print("perf_event_open restricted.")
 
-# Function to list users with weak passwords (based on a weak password list)
-check_weak_passwords() {
-    echo "Checking for weak passwords..."
-    # Add code here to check users against a dictionary of weak passwords
-    echo "Weak password audit complete."
-}
+# Function to disable GDM greeter root login
+def disable_gdm_root_login():
+    print("Disabling GDM greeter root login...")
+    subprocess.run(["sudo", "echo", "greeter-show-manual-login=false", ">>", "/etc/gdm3/custom.conf"])
+    print("GDM root login disabled.")
+
+# Function to disable SSH root login
+def disable_ssh_root_login():
+    print("Disabling SSH root login...")
+    subprocess.run(["sudo", "sed", "-i", 's/PermitRootLogin yes/PermitRootLogin no/', "/etc/ssh/sshd_config"])
+    subprocess.run(["sudo", "systemctl", "restart", "ssh"])
+    print("SSH root login disabled.")
+
+# Function to ensure SSH does not allow empty passwords
+def disable_empty_ssh_passwords():
+    print("Disabling empty SSH passwords...")
+    subprocess.run(["sudo", "sed", "-i", 's/PermitEmptyPasswords yes/PermitEmptyPasswords no/', "/etc/ssh/sshd_config"])
+    subprocess.run(["sudo", "systemctl", "restart", "ssh"])
+    print("Empty SSH passwords disabled.")
 
 # Main menu
-while true; do
-    echo "CyberPatriot Master Script"
-    echo "1. Check installed services"
-    echo "2. Disable unnecessary services"
-    echo "3. Secure file permissions"
-    echo "4. Check password expiration policy"
-    echo "5. Audit SUID/SGID binaries"
-    echo "6. Check for open ports"
-    echo "7. Audit user accounts and sudo privileges"
-    echo "8. Update and patch system"
-    echo "9. Configure firewall"
-    echo "10. Monitor logs"
-    echo "11. Check for weak passwords"
-    echo "0. Exit"
-    echo -n "Please choose an option: "
-    read choice
+def main():
+    while True:
+        print("\nSecurity Master Script")
+        print("1. Remove Unauthorized Users")
+        print("2. Remove Certain Admin Users")
+        print("3. Spot Root Impostors")
+        print("4. Configure Secure Password Hashing")
+        print("5. Enable Dictionary Password Strength Checks")
+        print("6. Enforce Minimum Password Length")
+        print("7. Disable IPv Forwarding")
+        print("8. Enable ASLR")
+        print("9. Disable New Kernel Boot")
+        print("10. Restrict perf_event_open to CAP_PERFMON")
+        print("11. Disable GDM Root Login")
+        print("12. Disable SSH Root Login")
+        print("13. Disable Empty SSH Passwords")
+        print("0. Exit")
+        
+        choice = input("Enter your choice: ")
 
-    case $choice in
-        1) check_services ;;
-        2) disable_unnecessary_services ;;
-        3) secure_file_permissions ;;
-        4) check_password_expiration ;;
-        5) audit_suid_sgid ;;
-        6) check_open_ports ;;
-        7) audit_users ;;
-        8) update_system ;;
-        9) configure_firewall ;;
-        10) monitor_logs ;;
-        11) check_weak_passwords ;;
-        0) echo "Exiting..."; exit 0 ;;
-        *) echo "Invalid option! Please try again." ;;
-    esac
-    echo "Press Enter to continue..."
-    read
-done
+        if choice == "1":
+            remove_unauthorized_users()
+        elif choice == "2":
+            remove_admin_users()
+        elif choice == "3":
+            spot_root_impostors()
+        elif choice == "4":
+            configure_password_hashing()
+        elif choice == "5":
+            enable_dictionary_password_checks()
+        elif choice == "6":
+            enforce_min_password_length()
+        elif choice == "7":
+            disable_ipv_forwarding()
+        elif choice == "8":
+            enable_aslr()
+        elif choice == "9":
+            disable_new_kernel_boot()
+        elif choice == "10":
+            restrict_perf_event_open()
+        elif choice == "11":
+            disable_gdm_root_login()
+        elif choice == "12":
+            disable_ssh_root_login()
+        elif choice == "13":
+            disable_empty_ssh_passwords()
+        elif choice == "0":
+            break
+        else:
+            print("Invalid choice! Please try again.")
+
+if __name__ == "__main__":
+    main()
