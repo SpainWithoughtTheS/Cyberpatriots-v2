@@ -1,6 +1,12 @@
 import subprocess
 import os
 
+CRITICAL_USERS = ['root', 'sys', 'bin', 'daemon', 'nobody', 'systemd-network', 'systemd-resolve', 'messagebus', 
+                  'systemd-timesync', 'syslog', '_apt', 'tss', 'uuidd', 'systemd-oom', 'tcpdump', 'avahi-autoipd', 
+                  'usbmux', 'dnsmasq', 'kernoops', 'avahi', 'cups-pk-helper', 'rtkit', 'whoopsie', 'sssd', 
+                  'speech-dispatcher', 'fwupd-refresh', 'nm-openvpn', 'saned', 'colord', 'geoclue', 'pulse', 
+                  'gnome-initial-setup', 'hplip', 'gdm', 'mysql', 'memcache', 'sshd']  # Add more as needed
+
 def get_system_users():
     """Get the list of system users."""
     try:
@@ -46,11 +52,13 @@ def main():
     # Get the list of system users
     system_users = get_system_users()
 
-    # Iterate through system users and remove any that are not in the allowed list
+    # Iterate through system users and remove any that are not in the allowed list and not critical
     for user in system_users:
-        if user not in allowed_users:
+        if user not in allowed_users and user not in CRITICAL_USERS:
             if confirm_removal(user):
                 remove_user(user)
+        elif user in CRITICAL_USERS:
+            print(f"Skipping critical user: {user}")
 
 if __name__ == "__main__":
     main()
