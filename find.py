@@ -1,28 +1,36 @@
 import os
 
-# List of media file extensions to search for
-MEDIA_EXTENSIONS = ['.mp3', '.mp4', '.wav', '.flac', '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.mkv', '.avi', '.mov']
-
-def find_media_files(directory):
-    media_files = []
-
-    # Walk through all directories and files in the specified path
-    for root, dirs, files in os.walk(directory):
-        for file in files:
-            # Check if the file has one of the media extensions
-            if any(file.lower().endswith(ext) for ext in MEDIA_EXTENSIONS):
-                media_files.append(os.path.join(root, file))
+def search_files():
+    print("Choose the type of file you want to search for:")
+    print("1. mp3")
+    print("2. png")
+    print("3. mp4")
+    print("4. jpeg")
+    print("5. jpg")
+    print("6. webp")
     
-    return media_files
+    choice = input("Enter your choice (1-6): ")
+    
+    if choice == '1':
+        filetype = "mp3"
+    elif choice == '2':
+        filetype = "png"
+    elif choice == '3':
+        filetype = "mp4"
+    elif choice == '4':
+        filetype = "jpeg"
+    elif choice == '5':
+        filetype = "jpg"
+    elif choice == '6':
+        filetype = "webp"
+    else:
+        print("Invalid choice")
+        return
+    
+    for root, dirs, files in os.walk("/"):
+        for file in files:
+            if file.endswith(f".{filetype}"):
+                print(os.path.join(root, file))
 
-# Replace with the directory you want to search
-search_directory = '/home/username'
-
-media_files = find_media_files(search_directory)
-
-if media_files:
-    print("Media files found:")
-    for media_file in media_files:
-        print(media_file)
-else:
-    print("No media files found.")
+if __name__ == "__main__":
+    search_files()
