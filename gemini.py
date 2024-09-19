@@ -78,12 +78,34 @@ def configure_firewall():
 # Function to monitor logs for suspicious activity
 def monitor_logs():
     logging.info("Monitoring /var/log/auth.log for unusual activity...")
-    # Use tail or other monitoring tools for real-time monitoring
+    try:
+        # Tail the log file in real-time
+        subprocess.run(['tail', '-f', '/var/log/auth.log'])
+    except KeyboardInterrupt:
+        logging.info("Monitoring interrupted by user.")
+    except Exception as e:
+        logging.error(f"Error while monitoring logs: {e}")
 
 # Function to check for weak passwords (using a dictionary)
+
 def check_weak_passwords():
     logging.info("Checking for weak passwords...")
-    # Implement weak password checking using a dictionary or other methods
+    # Load weak password dictionary
+    weak_passwords = set()
+    try:
+        with open('weak_passwords.txt', 'r') as file:
+            weak_passwords = {line.strip() for line in file}
+    except FileNotFoundError:
+        logging.error("Weak password dictionary not found.")
+        return
+
+    # Iterate over users and check their passwords
+    with open('/etc/shadow', 'r') as shadow_file:
+        for line in shadow_file:
+            user_data = line.split(':')
+            user, password_hash = user_data[0], user_data[1]
+            if password_hash in weak_passwords:
+                logging.warning(f"Weak password detected for user: {user}")
 
 # Function to check for outdated packages
 def check_outdated_packages():
