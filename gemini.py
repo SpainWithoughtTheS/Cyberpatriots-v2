@@ -95,9 +95,11 @@ def check_weak_passwords():
     try:
         with open('weak_passwords.txt', 'r') as file:
             weak_passwords = {line.strip() for line in file}
+        logging.debug(f"Weak password dictionary loaded with {len(weak_passwords)} entries.")
     except FileNotFoundError:
         logging.error("Weak password dictionary not found.")
         return
+
 
     # Iterate over users and check their passwords
     with open('/etc/shadow', 'r') as shadow_file:
