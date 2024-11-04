@@ -1,5 +1,4 @@
 import subprocess
-import os
 
 # Define the sysctl settings to be set
 sysctl_settings = {
@@ -28,24 +27,33 @@ def set_sysctl_parameters(settings):
         except subprocess.CalledProcessError as e:
             print(f"Failed to set {key}: {e}")
         except Exception as e:
-            print(f"An error occurred: {e}")
+            print(f"An error occurred while setting {key}: {e}")
 
 # Function to ensure settings are in sysctl.conf
 def ensure_sysctl_in_conf(settings, path):
     try:
-        with open(path, 'a') as file:
+        # Read current settings
+        with open(path, 'r') as file:
+            lines = file.readlines()
+        
+        with open(path, 'w') as file:
             for key, value in settings.items():
-                # Check if the setting already exists in the file
-                file.seek(0)
-                if f"{key} = {value}" not in file.read():
-                    file.write(f"{key} = {value}\n")
-                    print(f"Added to {path}: {key} = {value}")
-                else:
-                    print(f"Already present in {path}: {key} = {value}")
+                line = f"{key} = {value}\n"
+                # Check if the setting already exists and update it
+                if any(line.strip().startswith(key) for line in lines):
+                    print(f"Updating {key} in {path}.")
+                    # Remove any existing line that starts with this key
+                    lines = [line for line in lines if not line.strip().startswith(key)]
+                file.write(line)
+            # Write the remaining lines back to the file
+            file.writelines(lines)
+            print(f"Added to {path}: {line.strip()}")
     except PermissionError:
         print("Permission denied. Please run the script with sudo.")
+    except FileNotFoundError:
+        print(f"{path} not found. Please check the path.")
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"An error occurred while writing to {path}: {e}")
 
 # Function to refresh sysctl settings
 def refresh_sysctl():
