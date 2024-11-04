@@ -59,33 +59,44 @@ def read_authorized_users(file_path):
                 
     return authorized_admins, authorized_users
 
+def confirm_removal(user):
+    """Ask for confirmation to remove a user."""
+    response = input(f"Do you want to remove unauthorized user {user}? (y/n): ").strip().lower()
+    return response == 'y'
+
 def main():
+    # Read the list of authorized admins and users from users.txt
     file_path = 'users.txt'
     authorized_admins, authorized_users = read_authorized_users(file_path)
     all_authorized_users = authorized_admins + authorized_users
 
+    # Fetch current system users
     system_users = get_system_users()
 
+    # Step 1: Prompt to remove users not in the authorized list and not critical
     for user in system_users:
         if user not in all_authorized_users and user not in CRITICAL_USERS:
-            remove_user(user)
-            print(f"Removed unauthorized user: {user}")
+            if confirm_removal(user):
+                remove_user(user)
+                print(f"Removed unauthorized user: {user}")
 
+    # Step 2: Add missing users and set up admin or regular user permissions
     for user in all_authorized_users:
         if user not in system_users:
             is_admin = user in authorized_admins
             add_user(user, is_admin)
             print(f"Added missing user: {user} {'(admin)' if is_admin else '(user)'}")
 
+    # Step 3: Ensure each authorized user's role is correct
     for user in authorized_admins:
         ensure_group_membership(user, is_admin=True)
 
     for user in authorized_users:
         ensure_group_membership(user, is_admin=False)
 
+    # Step 4: Set passwords for all authorized users
     for user in all_authorized_users:
         set_password(user)
-        # we should prolly randomize this in the future, shouldnt be too ahrd
         print(f"Password for {user} set to 'CyberPatriot@24'.")
 
 if __name__ == "__main__":
