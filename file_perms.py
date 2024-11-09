@@ -18,13 +18,15 @@ def check_and_fix_ownership_permissions(directory):
                 file_mode = file_stat.st_mode
 
                 if file_uid != 0 or file_gid != 0:
-                    incorrect_permissions_files.append((filepath, "Incorrect ownership"))
-                    os.chown(filepath, 0, 0)  
+                    # incorrect_permissions_files.append((filepath, "Incorrect ownership"))
+                    # os.chown(filepath, 0, 0)  
+                    print(f"{filepath} has incorrect ownership.")
 
                 expected_modes = [stat.S_IRUSR | stat.S_IWUSR, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP]
                 if file_mode & 0o777 not in expected_modes:
-                    incorrect_permissions_files.append((filepath, "Incorrect permissions"))
-                    os.chmod(filepath, expected_modes[1])  
+                    # incorrect_permissions_files.append((filepath, "Incorrect permissions"))
+                    # os.chmod(filepath, expected_modes[1])
+                    print(f"{filepath} has incorrect ownership.")
 
             except FileNotFoundError:
 
