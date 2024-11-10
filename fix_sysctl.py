@@ -14,7 +14,8 @@ sysctl_settings = {
     "net.ipv4.conf.all.log_martians": 1,
     "kernel.exec-shield": 1,
     "fs.protected_symlinks": 1,
-    "kernel.sysrq": 0
+    "kernel.sysrq": 0,
+    "kernel.kptr_restrict": 2
 }
 
 # Path to sysctl.conf
