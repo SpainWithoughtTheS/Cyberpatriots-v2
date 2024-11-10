@@ -7,7 +7,8 @@ ssh_settings = {
     "PermitRootLogin": "no",
     "X11Forwarding": "no",
     "PermitEmptyPasswords": "no",
-    "UsePAM": "yes"
+    "UsePAM": "yes",
+    "PasswordAuthentication": "no"
 }
 
 # Path to sshd_config
