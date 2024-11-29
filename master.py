@@ -28,7 +28,8 @@ def spot_root_impostors():
 def configure_password_hashing():
     print("Configuring secure password hashing...")
     subprocess.run(["sudo", "sed", "-i", 's/^PASS_MAX_DAYS.*/PASS_MAX_DAYS 90/', "/etc/login.defs"])
-    print("Password hashing algorithm secured.")
+    subprocess.run(["sudo", "sed", "-i", 's/^password\s\+requisite\s\+pam_unix.so/password requisite pam_unix.so crypt_blowfish/', "/etc/pam.d/common-password"])
+    print("Password hashing algorithm secured using bcrypt.")
 
 # Function to enable extra dictionary-based password strength checks
 def enable_dictionary_password_checks():
