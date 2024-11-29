@@ -6,8 +6,10 @@ CRITICAL_USERS = [
     'tcpdump', 'avahi-autoipd', 'usbmux', 'dnsmasq', 'kernoops', 'avahi', 'cups-pk-helper',
     'rtkit', 'whoopsie', 'sssd', 'speech-dispatcher', 'fwupd-refresh', 'nm-openvpn',
     'saned', 'colord', 'geoclue', 'pulse', 'gnome-initial-setup', 'hplip', 'gdm', 'mysql',
-    'memcache', 'sshd'
+    'memcache', 'sshd', 'sync', 'games', 'man', 'lp', 'mail', 'news', 'uucp', 'proxy', 'www-data', 'backup',
+    'list', 'irc', 'gnats'
 ]
+
 
 def get_system_users():
     """Get a list of current system users."""
