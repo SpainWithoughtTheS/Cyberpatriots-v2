@@ -8,8 +8,13 @@ ssh_settings = {
     "X11Forwarding": "no",
     "PermitEmptyPasswords": "no",
     "UsePAM": "yes",
-    "PasswordAuthentication": "no"
+    "PasswordAuthentication": "no",
+    "PubkeyAuthentication": "no",
+    "LogLevel": "INFO",
+    "AcceptEnv": "",
+    "ChallengeResponseAuthentication": "no"
 }
+
 
 # Path to sshd_config
 ssh_config_path = '/etc/ssh/sshd_config'
