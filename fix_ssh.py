@@ -11,7 +11,7 @@ ssh_settings = {
     "PasswordAuthentication": "no",
     "PubkeyAuthentication": "no",
     "LogLevel": "INFO",
-    "AcceptEnv": "",
+    "PermitUserEnvironment": "no",
     "ChallengeResponseAuthentication": "no"
 }
 
