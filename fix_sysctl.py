@@ -3,6 +3,7 @@ import subprocess
 # Define the sysctl settings to be set
 sysctl_settings = {
     "net.ipv4.tcp_rfc1337": 1,
+    "net.ipv4.ip_forward": 0,
     "net.ipv4.tcp_syncookies": 1,
     "net.ipv4.conf.all.rp_filter": 1,
     "net.ipv4.conf.default.rp_filter": 1,
