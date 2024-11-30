@@ -47,7 +47,7 @@ def disable_unnecessary_services():
 # Function to secure file permissions for sensitive files
 def secure_file_permissions():
     logging.info("Securing permissions for /etc/passwd and /etc/shadow...")
-    files = {"/etc/passwd": "644", "/etc/shadow": "600"}
+    files = {"/etc/passwd": "644", "/etc/shadow": "600", "/etc/ssh/sshd_config": "600"}
     for file, perm in files.items():
         if os.path.exists(file):
             run_command(f"sudo chmod {perm} {file}")
