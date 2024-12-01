@@ -72,7 +72,7 @@ def restrict_perf_event_open():
 def disable_gdm_root_login():
     print("Disabling GDM greeter root login...")
     subprocess.run(["sudo", "echo", "greeter-show-manual-login=false", ">>", "/etc/gdm3/custom.conf"])
-    subprocess.run(["sudo", "sh", "-c", "echo -e '\\n[security]\\nDisallowRoot=true' >> /etc/gdm3/custom.conf"], check=True)
+    subprocess.run(["sudo", "sh", "-c", "echo -e '\\n[security]\\nAllowRoot=false' >> /etc/gdm3/custom.conf"], check=True)
     print("GDM root login disabled.")
 
 # Function to disable SSH root login
