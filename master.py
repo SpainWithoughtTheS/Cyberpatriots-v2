@@ -6,30 +6,38 @@ def remove_unauthorized_users():
     print("Removing unauthorized users...")
     users_to_remove = ["user1", "user2"]  # Add users to remove here
     for user in users_to_remove:
-        subprocess.run(["sudo", "userdel", user])
-    print("Unauthorized users removed.")
+        confirm = input(f"Are you sure you want to remove the user '{user}'? (yes/no): ").strip().lower()
+        if confirm == "yes":
+            subprocess.run(["sudo", "userdel", user])
+            print(f"User '{user}' removed.")
+        else:
+            print(f"Skipped removing user '{user}'.")
+    print("Unauthorized users removal process completed.")
 
 # Function to remove certain admin users
 def remove_admin_users():
     print("Removing certain admin users...")
     admins_to_remove = ["admin1", "admin2"]  # Add admin users to remove here
     for admin in admins_to_remove:
-        subprocess.run(["sudo", "deluser", admin, "sudo"])
-    print("Certain admin users removed.")
+        confirm = input(f"Are you sure you want to remove admin privileges for '{admin}'? (yes/no): ").strip().lower()
+        if confirm == "yes":
+            subprocess.run(["sudo", "deluser", admin, "sudo"])
+            print(f"Admin privileges removed for '{admin}'.")
+        else:
+            print(f"Skipped removing admin privileges for '{admin}'.")
+    print("Admin users removal process completed.")
 
 # Function to spot root impostors
 def spot_root_impostors():
     print("Spotting root impostors...")
-    # Checking for users with UID 0 except root
     subprocess.run(["awk", "-F:", '($3 == "0" && $1 != "root") {print}', "/etc/passwd"])
-    print("Root impostors spotted.")
+    print("Root impostors spotting completed.")
 
 # Function to configure secure default password hashing algorithm
 def configure_password_hashing():
     print("Configuring secure password hashing...")
     subprocess.run(["sudo", "sed", "-i", 's/^PASS_MAX_DAYS.*/PASS_MAX_DAYS 90/', "/etc/login.defs"])
-    # subprocess.run(["sudo", "sed", "-i", 's/^password\s\+\[success=2 default=ignore\]\s\+pam_unix.so/password        [success=2 default=ignore]      pam_unix.so crypt_blowfish minlen=10/', "/etc/pam.d/common-password"])
-    # print("Password hashing algorithm secured using bcrypt.")
+    print("Password hashing configuration updated.")
 
 # Function to enable extra dictionary-based password strength checks
 def enable_dictionary_password_checks():
@@ -71,7 +79,6 @@ def restrict_perf_event_open():
 # Function to disable GDM greeter root login
 def disable_gdm_root_login():
     print("Disabling GDM greeter root login...")
-    subprocess.run(["sudo", "echo", "greeter-show-manual-login=false", ">>", "/etc/gdm3/custom.conf"])
     subprocess.run(["sudo", "sh", "-c", "echo -e '\\n[security]\\nAllowRoot=false' >> /etc/gdm3/custom.conf"], check=True)
     print("GDM root login disabled.")
 
@@ -88,6 +95,37 @@ def disable_empty_ssh_passwords():
     subprocess.run(["sudo", "sed", "-i", 's/PermitEmptyPasswords yes/PermitEmptyPasswords no/', "/etc/ssh/sshd_config"])
     subprocess.run(["sudo", "systemctl", "restart", "ssh"])
     print("Empty SSH passwords disabled.")
+
+# Function to disable guest user login
+def disable_guest_users():
+    print("Disabling guest users...")
+    try:
+        # Check if LightDM is the active display manager
+        lightdm_status = subprocess.run(["sudo", "systemctl", "is-active", "lightdm"], capture_output=True, text=True)
+        if lightdm_status.stdout.strip() == "active":
+            subprocess.run(["sudo", "sh", "-c", "echo '[SeatDefaults]' >> /etc/lightdm/lightdm.conf"])
+            subprocess.run(["sudo", "sh", "-c", "echo 'allow-guest=false' >> /etc/lightdm/lightdm.conf"])
+            print("Guest user login disabled in LightDM.")
+        
+        # Check if GDM is the active display manager
+        gdm_status = subprocess.run(["sudo", "systemctl", "is-active", "gdm"], capture_output=True, text=True)
+        if gdm_status.stdout.strip() == "active":
+            subprocess.run(["sudo", "sh", "-c", \"echo -e '\\n[security]\\nAllowGuest=false' >> /etc/gdm3/custom.conf\""])
+            print("Guest user login disabled in GDM.")
+        
+        # Check if SDDM is the active display manager
+        sddm_status = subprocess.run(["sudo", "systemctl", "is-active", "sddm"], capture_output=True, text=True)
+        if sddm_status.stdout.strip() == "active":
+            subprocess.run(["sudo", "sh", "-c", \"echo -e '[General]\\nEnableGuest=false' >> /etc/sddm.conf\""])
+            print("Guest user login disabled in SDDM.")
+        
+        # If none of the above display managers are active
+        if lightdm_status.stdout.strip() != "active" and gdm_status.stdout.strip() != "active" and sddm_status.stdout.strip() != "active":
+            print("No supported display manager is currently active. Please manually configure guest login settings for your display manager.")
+    
+    except Exception as e:
+        print(f"An error occurred while disabling guest users: {e}")
+
 
 # Main menu
 def main():
@@ -106,6 +144,7 @@ def main():
         print("11. Disable GDM Root Login")
         print("12. Disable SSH Root Login")
         print("13. Disable Empty SSH Passwords")
+        print("14. Disable Guest Users")
         print("0. Exit")
         
         choice = input("Enter your choice: ")
@@ -136,6 +175,8 @@ def main():
             disable_ssh_root_login()
         elif choice == "13":
             disable_empty_ssh_passwords()
+        elif choice == "14":
+            disable_guest_users()
         elif choice == "0":
             break
         else:
