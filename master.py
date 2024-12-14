@@ -110,13 +110,13 @@ def disable_guest_users():
         # Check if GDM is the active display manager
         gdm_status = subprocess.run(["sudo", "systemctl", "is-active", "gdm"], capture_output=True, text=True)
         if gdm_status.stdout.strip() == "active":
-            subprocess.run(["sudo", "sh", "-c", \"echo -e '\\n[security]\\nAllowGuest=false' >> /etc/gdm3/custom.conf\""])
+            subprocess.run(["sudo", "sh", "-c", "echo -e '\\n[security]\\nAllowGuest=false' >> /etc/gdm3/custom.conf"])
             print("Guest user login disabled in GDM.")
         
         # Check if SDDM is the active display manager
         sddm_status = subprocess.run(["sudo", "systemctl", "is-active", "sddm"], capture_output=True, text=True)
         if sddm_status.stdout.strip() == "active":
-            subprocess.run(["sudo", "sh", "-c", \"echo -e '[General]\\nEnableGuest=false' >> /etc/sddm.conf\""])
+            subprocess.run(["sudo", "sh", "-c", "echo -e '[General]\\nEnableGuest=false' >> /etc/sddm.conf"])
             print("Guest user login disabled in SDDM.")
         
         # If none of the above display managers are active
@@ -125,7 +125,6 @@ def disable_guest_users():
     
     except Exception as e:
         print(f"An error occurred while disabling guest users: {e}")
-
 
 # Main menu
 def main():
