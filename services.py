@@ -15,13 +15,6 @@ BLACKLISTED_SERVICES = [
     "network-manager",   # Networking service
 ]
 
-# Additional services to disable
-ADDITIONAL_SERVICES = [
-    "bluetooth",          # Bluetooth service
-    "avahi-daemon",       # mDNS/DNS-SD discovery
-    "cups",               # Printer service
-    "snapd",              # Snap package manager (optional)
-]
 
 def list_running_services():
     """List all currently running services."""
