@@ -1,7 +1,6 @@
 import subprocess
 import os
 
-
 def remove_local_user(username):
     """Remove unauthorized local users."""
     try:
@@ -10,7 +9,6 @@ def remove_local_user(username):
     except subprocess.CalledProcessError:
         print(f"Failed to remove user {username}.")
 
-
 def demote_admin_user(username):
     """Demote unauthorized users from the sudo/admin group."""
     try:
@@ -18,7 +16,6 @@ def demote_admin_user(username):
         print(f"Local user {username} is no longer an administrator.")
     except subprocess.CalledProcessError:
         print(f"Failed to demote user {username}.")
-
 
 def configure_password_policy():
     """Configure secure password policies."""
@@ -35,7 +32,7 @@ def configure_password_policy():
 
         # Enforce minimum password length and remember previous passwords
         with open("/etc/security/pwquality.conf", "a") as f:
-            f.write("minlen = 12\nretry = 3\n")
+            f.write("minlen = 10\nretry = 3\n")
         print("A minimum password length is enforced.")
 
         with open("/etc/pam.d/common-password", "a") as f:
@@ -44,7 +41,6 @@ def configure_password_policy():
     except Exception as e:
         print(f"Error configuring password policies: {e}")
 
-
 def disable_ipv4_forwarding():
     """Disable IPv4 forwarding."""
     try:
@@ -52,7 +48,6 @@ def disable_ipv4_forwarding():
         print("IPv4 forwarding disabled.")
     except subprocess.CalledProcessError:
         print("Failed to disable IPv4 forwarding.")
-
 
 def enable_aslr():
     """Enable Address Space Layout Randomization (ASLR)."""
@@ -63,7 +58,6 @@ def enable_aslr():
     except Exception as e:
         print(f"Failed to enable ASLR: {e}")
 
-
 def restrict_perf_event():
     """Restrict access to CPU performance events."""
     try:
@@ -73,7 +67,6 @@ def restrict_perf_event():
     except Exception as e:
         print(f"Failed to restrict perf_event: {e}")
 
-
 def disable_unwanted_booting():
     """Disable new kernel boot alongside the current one."""
     try:
@@ -82,7 +75,6 @@ def disable_unwanted_booting():
         print("New kernels cannot be booted alongside the current one.")
     except subprocess.CalledProcessError:
         print("Failed to restrict boot options.")
-
 
 def remove_world_writable_files():
     """Ensure critical files are not world-writable."""
@@ -94,7 +86,6 @@ def remove_world_writable_files():
         except subprocess.CalledProcessError:
             print(f"Failed to update permissions for {file}.")
 
-
 def disable_suid_binary(binary):
     """Ensure specific binaries do not have the SUID bit set."""
     try:
@@ -102,7 +93,6 @@ def disable_suid_binary(binary):
         print(f"The SUID bit has been removed from {binary}.")
     except subprocess.CalledProcessError:
         print(f"Failed to disable SUID on {binary}.")
-
 
 def enable_firewall():
     """Enable UFW and configure it to start on boot."""
@@ -113,7 +103,6 @@ def enable_firewall():
     except subprocess.CalledProcessError:
         print("Failed to enable UFW.")
 
-
 def configure_apparmor():
     """Enable and start AppArmor."""
     try:
@@ -122,7 +111,6 @@ def configure_apparmor():
         print("AppArmor service enabled and started.")
     except subprocess.CalledProcessError:
         print("Failed to configure AppArmor.")
-
 
 def remove_unwanted_services(services):
     """Remove prohibited or malicious services."""
@@ -134,7 +122,6 @@ def remove_unwanted_services(services):
             print(f"Service {service} removed.")
         except subprocess.CalledProcessError:
             print(f"Failed to remove service: {service}")
-
 
 def secure_seahub():
     """Harden Seahub settings."""
@@ -154,7 +141,6 @@ def secure_seahub():
         print("Seafile fileserver access logging enabled.")
     except Exception as e:
         print(f"Error securing Seahub: {e}")
-
 
 def secure_ssh():
     """Secure SSH configurations."""
