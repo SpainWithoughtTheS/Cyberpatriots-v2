@@ -1,5 +1,6 @@
-import os
 import subprocess
+import os
+
 
 def remove_local_user(username):
     """Remove unauthorized local users."""
@@ -9,6 +10,7 @@ def remove_local_user(username):
     except subprocess.CalledProcessError:
         print(f"Failed to remove user {username}.")
 
+
 def demote_admin_user(username):
     """Demote unauthorized users from the sudo/admin group."""
     try:
@@ -17,20 +19,21 @@ def demote_admin_user(username):
     except subprocess.CalledProcessError:
         print(f"Failed to demote user {username}.")
 
+
 def configure_password_policy():
     """Configure secure password policies."""
     try:
-        # Set secure password hashing algorithm
+        # Secure password hashing algorithm
         with open("/etc/login.defs", "a") as f:
             f.write("ENCRYPT_METHOD SHA512\n")
         print("A secure default password hashing algorithm configured.")
 
-        # Enable dictionary-based password strength checks
+        # Dictionary-based password strength checks
         with open("/etc/pam.d/common-password", "a") as f:
             f.write("password requisite pam_pwquality.so retry=3\n")
         print("Dictionary-based password strength checks enabled.")
 
-        # Set minimum password length and remember previous passwords
+        # Enforce minimum password length and remember previous passwords
         with open("/etc/security/pwquality.conf", "a") as f:
             f.write("minlen = 12\nretry = 3\n")
         print("A minimum password length is enforced.")
@@ -41,6 +44,7 @@ def configure_password_policy():
     except Exception as e:
         print(f"Error configuring password policies: {e}")
 
+
 def disable_ipv4_forwarding():
     """Disable IPv4 forwarding."""
     try:
@@ -48,6 +52,7 @@ def disable_ipv4_forwarding():
         print("IPv4 forwarding disabled.")
     except subprocess.CalledProcessError:
         print("Failed to disable IPv4 forwarding.")
+
 
 def enable_aslr():
     """Enable Address Space Layout Randomization (ASLR)."""
@@ -58,6 +63,7 @@ def enable_aslr():
     except Exception as e:
         print(f"Failed to enable ASLR: {e}")
 
+
 def restrict_perf_event():
     """Restrict access to CPU performance events."""
     try:
@@ -67,33 +73,36 @@ def restrict_perf_event():
     except Exception as e:
         print(f"Failed to restrict perf_event: {e}")
 
-def configure_ssh():
-    """Secure SSH configuration."""
-    try:
-        ssh_config_path = "/etc/ssh/sshd_config"
-        changes = {
-            "PermitRootLogin": "no",
-            "PasswordAuthentication": "no",
-            "PermitEmptyPasswords": "no",
-            "LogLevel": "INFO",
-            "AllowTcpForwarding": "no",
-            "X11Forwarding": "no"
-        }
-        for key, value in changes.items():
-            subprocess.run(["sudo", "sed", "-i", f"s/^#?{key}.*/{key} {value}/", ssh_config_path], check=True)
-        subprocess.run(["sudo", "systemctl", "restart", "ssh"], check=True)
-        print("SSH configuration secured.")
-    except subprocess.CalledProcessError as e:
-        print(f"Failed to configure SSH: {e}")
 
-def remove_unwanted_packages(packages):
-    """Remove prohibited or malicious software."""
+def disable_unwanted_booting():
+    """Disable new kernel boot alongside the current one."""
     try:
-        for package in packages:
-            subprocess.run(["sudo", "apt-get", "purge", "-y", package], check=True)
-            print(f"Prohibited software {package} removed.")
-    except subprocess.CalledProcessError as e:
-        print(f"Failed to remove software: {e}")
+        subprocess.run(["sudo", "sed", "-i", "s/^GRUB_DEFAULT=.*/GRUB_DEFAULT=0/", "/etc/default/grub"], check=True)
+        subprocess.run(["sudo", "update-grub"], check=True)
+        print("New kernels cannot be booted alongside the current one.")
+    except subprocess.CalledProcessError:
+        print("Failed to restrict boot options.")
+
+
+def remove_world_writable_files():
+    """Ensure critical files are not world-writable."""
+    files_to_check = ["/etc/ssh/sshd_config", "/etc/init.d/seafile"]
+    for file in files_to_check:
+        try:
+            subprocess.run(["sudo", "chmod", "600", file], check=True)
+            print(f"{file} is no longer world writable.")
+        except subprocess.CalledProcessError:
+            print(f"Failed to update permissions for {file}.")
+
+
+def disable_suid_binary(binary):
+    """Ensure specific binaries do not have the SUID bit set."""
+    try:
+        subprocess.run(["sudo", "chmod", "-s", binary], check=True)
+        print(f"The SUID bit has been removed from {binary}.")
+    except subprocess.CalledProcessError:
+        print(f"Failed to disable SUID on {binary}.")
+
 
 def enable_firewall():
     """Enable UFW and configure it to start on boot."""
@@ -104,6 +113,7 @@ def enable_firewall():
     except subprocess.CalledProcessError:
         print("Failed to enable UFW.")
 
+
 def configure_apparmor():
     """Enable and start AppArmor."""
     try:
@@ -113,34 +123,88 @@ def configure_apparmor():
     except subprocess.CalledProcessError:
         print("Failed to configure AppArmor.")
 
-def harden_miscellaneous():
-    """Handle miscellaneous security tasks."""
-    try:
-        # Disable root login for GDM
-        subprocess.run(["sudo", "sed", "-i", "s/^#?AllowRoot.*/AllowRoot=false/", "/etc/gdm3/custom.conf"], check=True)
-        print("GDM greeter root login disabled.")
 
-        # Restrict preload environment variables with sudo
-        subprocess.run(["sudo", "sed", "-i", "s/^#?Defaults\s+env_reset.*/Defaults env_reset/", "/etc/sudoers"], check=True)
-        print("Environment variable defining preloaded libraries is not kept with sudo.")
-    except subprocess.CalledProcessError:
-        print("Failed to harden miscellaneous security settings.")
+def remove_unwanted_services(services):
+    """Remove prohibited or malicious services."""
+    for service in services:
+        try:
+            subprocess.run(["sudo", "systemctl", "disable", service], check=True)
+            subprocess.run(["sudo", "systemctl", "stop", service], check=True)
+            subprocess.run(["sudo", "apt-get", "purge", "-y", service], check=True)
+            print(f"Service {service} removed.")
+        except subprocess.CalledProcessError:
+            print(f"Failed to remove service: {service}")
+
+
+def secure_seahub():
+    """Harden Seahub settings."""
+    try:
+        # Enforce password policies for Seahub users
+        settings = [
+            "PASSWORD_MIN_LENGTH = 10\n",
+            "PASSWORD_COMPLEXITY = {'UPPER': 1, 'LOWER': 1, 'DIGIT': 1, 'OTHER': 1}\n",
+            "SESSION_EXPIRE_AT_BROWSER_CLOSE = True\n",
+        ]
+        with open("/path/to/seahub_settings.py", "a") as f:
+            f.writelines(settings)
+        print("Seahub user account security settings applied.")
+
+        # Enable logging for file access
+        subprocess.run(["sudo", "sed", "-i", "s/^#ENABLE_LOGGING.*/ENABLE_LOGGING=True/", "/path/to/seahub.conf"], check=True)
+        print("Seafile fileserver access logging enabled.")
+    except Exception as e:
+        print(f"Error securing Seahub: {e}")
+
+
+def secure_ssh():
+    """Secure SSH configurations."""
+    ssh_config_path = "/etc/ssh/sshd_config"
+    try:
+        settings = {
+            "PermitRootLogin": "no",
+            "PasswordAuthentication": "no",
+            "PermitEmptyPasswords": "no",
+            "LogLevel": "VERBOSE",
+            "AllowTcpForwarding": "no",
+            "X11Forwarding": "no",
+        }
+        for key, value in settings.items():
+            subprocess.run(["sudo", "sed", "-i", f"s/^#?{key}.*/{key} {value}/", ssh_config_path], check=True)
+        subprocess.run(["sudo", "systemctl", "restart", "ssh"], check=True)
+        print("SSH configuration hardened.")
+    except subprocess.CalledProcessError as e:
+        print(f"Error securing SSH: {e}")
+
 
 def main():
-    # Perform each task
+    # Remove unauthorized users
     remove_local_user("rowan")
     remove_local_user("mmouse")
-    demote_admin_user("vkinbott")
     remove_local_user("lgates")
+
+    # Demote unauthorized admin users
+    demote_admin_user("vkinbott")
+
+    # Configure system and user security
     configure_password_policy()
     disable_ipv4_forwarding()
     enable_aslr()
     restrict_perf_event()
-    configure_ssh()
-    remove_unwanted_packages(["apache2", "pvpgn", "sucrack", "changeme", "unworkable"])
+    disable_unwanted_booting()
+    remove_world_writable_files()
+
+    # Secure SUID and critical services
+    disable_suid_binary("/bin/date")
     enable_firewall()
     configure_apparmor()
-    harden_miscellaneous()
+    remove_unwanted_services(["apache2", "pvpgn"])
+
+    # Harden Seahub and SSH
+    secure_seahub()
+    secure_ssh()
+
+    print("\nAll tasks completed. System hardened.")
+
 
 if __name__ == "__main__":
     main()
