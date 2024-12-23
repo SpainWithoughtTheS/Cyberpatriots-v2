@@ -37,6 +37,10 @@ def ensure_group_membership(user, is_admin):
     else:
         subprocess.run(['sudo', 'gpasswd', '-d', user, 'sudo'], check=False)
 
+def change_password_policy(user):
+    """Change the password policy for the given user."""
+    subprocess.run(['sudo', 'chage', '-m', '7', '-M', '90', '-W', '14', '-I', '30', user], check=True)
+
 def read_authorized_users(file_path):
     """Read authorized admins and users from the users.txt file."""
     authorized_admins = []
@@ -99,7 +103,10 @@ def main():
     # Step 4: Set passwords for all authorized users
     for user in all_authorized_users:
         set_password(user)
-        print(f"Password for {user} set to 'CyberPatriot@24'.")
+
+    # Step 5: Change password policies for all users
+    for user in all_authorized_users:
+        change_password_policy(user)
 
 if __name__ == "__main__":
     main()
