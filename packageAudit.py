@@ -12,7 +12,8 @@ packages = [
     'foremost', 'sleuthkit', 'autopsy', 'chntpw', 'flasm', 'macchanger', 'truecrack', 
     'tcpflow', 'tcpreplay', 'tcpdump', 'sslyze', 'powersploit', 'reaver', 'pixiewps', 
     'photon', 'lynis', 'joomscan', 'ettercap', 'sslstrip', 'slowhttptest', 'skipfish', 
-    'seclists', 'pyrit', 'proxychains', 'proxychains-ng', 'vsftpd', 'samba', 'apache', 'nginx'
+    'seclists', 'pyrit', 'proxychains', 'proxychains-ng', 'vsftpd', 'samba', 'apache', 
+    'nginx', 'pop3', 'smtp', 'squid'
 ]
 
 # Function to check if a package is installed
