@@ -21,7 +21,7 @@ def get_installed_packages():
     try:
         result = subprocess.run(
             ['dpkg', '--get-selections'], 
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True
         )
         if result.returncode == 0:
             installed_packages = set(line.split()[0] for line in result.stdout.splitlines())
@@ -41,5 +41,5 @@ for package in packages:
     if package in installed_packages:
         print(f"{package} is installed")
     else:
-        # print(f"{package} is not installed")
         pass
+        # print(f"{package} is not installed")
