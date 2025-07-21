@@ -12,47 +12,119 @@ def run_script(script_name):
     except Exception as e:
         input(f"Error running {script_name}: {e}\nPress Enter to continue...")
 
+def safe_cmd(cmd, shell=False):
+    try:
+        return subprocess.check_output(cmd, shell=shell, text=True, stderr=subprocess.DEVNULL).strip()
+    except Exception:
+        return None
+
 def get_system_info():
     info = []
+
     # Uptime
-    try:
-        uptime = subprocess.check_output(["uptime", "-p"]).decode().strip()
-        info.append(f"Uptime: {uptime}")
-    except:
-        info.append("Uptime: N/A")
+    uptime = safe_cmd(["uptime", "-p"])
+    info.append(f"Uptime: {uptime or 'N/A'}")
 
-    # CPU Load
-    try:
-        load = subprocess.check_output(["cat", "/proc/loadavg"]).decode().split()
-        info.append(f"Load Average (1/5/15 min): {load[0]}, {load[1]}, {load[2]}")
-    except:
-        info.append("Load Average: N/A")
+    # Load average
+    loadavg = safe_cmd("cat /proc/loadavg", shell=True)
+    if loadavg:
+        la = loadavg.split()
+        info.append(f"Load Avg (1/5/15 min): {la[0]}, {la[1]}, {la[2]}")
+    else:
+        info.append("Load Avg: N/A")
 
-    # Memory Usage
-    try:
-        meminfo = subprocess.check_output(["free", "-h"]).decode().splitlines()
+    # Memory usage
+    meminfo = safe_cmd(["free", "-h"])
+    if meminfo:
+        mem_lines = meminfo.splitlines()
         info.append("Memory Usage:")
-        info.extend(meminfo[1:3])  # Mem and Swap lines
-    except:
+        info.extend(mem_lines[1:3])  # Mem and Swap lines
+    else:
         info.append("Memory Usage: N/A")
 
-    # Disk Usage
-    try:
-        disk = subprocess.check_output(["df", "-h", "/"]).decode().splitlines()
+    # Disk usage for root
+    disk = safe_cmd(["df", "-h", "/"])
+    if disk:
+        disk_lines = disk.splitlines()
         info.append("Disk Usage (/):")
-        info.append(disk[1])
-    except:
+        info.append(disk_lines[1])
+    else:
         info.append("Disk Usage: N/A")
 
-    # Open Ports (Listening)
-    try:
-        ports = subprocess.check_output(["ss", "-tuln"]).decode().splitlines()
-        info.append("Open TCP/UDP Listening Ports:")
-        info.extend(ports[:10])  # show top 10 for brevity
-        if len(ports) > 10:
-            info.append(f"... ({len(ports)-10} more lines)")
-    except:
+    # Open listening ports (top 10)
+    ports = safe_cmd(["ss", "-tuln"])
+    if ports:
+        ports_lines = ports.splitlines()
+        info.append("Open Listening TCP/UDP Ports:")
+        info.extend(ports_lines[:10])
+        if len(ports_lines) > 10:
+            info.append(f"... ({len(ports_lines)-10} more lines)")
+    else:
         info.append("Ports: N/A")
+
+    # Recent failed login attempts (last 10)
+    failed_logins = safe_cmd("sudo tail -n 20 /var/log/auth.log | grep 'Failed password'", shell=True)
+    info.append("Recent Failed Logins:")
+    if failed_logins:
+        info.extend(failed_logins.splitlines()[-10:])
+    else:
+        info.append("N/A or permission denied")
+
+    # Currently logged in users
+    users = safe_cmd("who", shell=True)
+    info.append("Logged In Users:")
+    if users:
+        info.extend(users.splitlines())
+    else:
+        info.append("N/A")
+
+    # UFW Firewall status
+    ufw_status = safe_cmd("sudo ufw status verbose", shell=True)
+    info.append("Firewall (UFW) Status:")
+    if ufw_status:
+        info.extend(ufw_status.splitlines())
+    else:
+        info.append("N/A or permission denied")
+
+    # Top CPU consuming processes (top 5)
+    top_cpu = safe_cmd("ps aux --sort=-%cpu | head -6", shell=True)
+    info.append("Top CPU Processes:")
+    if top_cpu:
+        info.extend(top_cpu.splitlines())
+    else:
+        info.append("N/A")
+
+    # Top Memory consuming processes (top 5)
+    top_mem = safe_cmd("ps aux --sort=-%mem | head -6", shell=True)
+    info.append("Top Memory Processes:")
+    if top_mem:
+        info.extend(top_mem.splitlines())
+    else:
+        info.append("N/A")
+
+    # Kernel version
+    kernel = safe_cmd(["uname", "-r"])
+    info.append(f"Kernel Version: {kernel or 'N/A'}")
+
+    # Last reboot time
+    reboot = safe_cmd("who -b", shell=True)
+    info.append(f"Last Reboot: {reboot or 'N/A'}")
+
+    # Loaded kernel modules (first 10)
+    lsmod = safe_cmd("lsmod | head -10", shell=True)
+    info.append("Loaded Kernel Modules (top 10):")
+    if lsmod:
+        info.extend(lsmod.splitlines())
+    else:
+        info.append("N/A")
+
+    # System temperature (requires lm-sensors)
+    sensors = safe_cmd("sensors", shell=True)
+    info.append("System Temperature:")
+    if sensors:
+        info.extend(sensors.splitlines()[:10])  
+    else:
+        info.append("N/A or lm-sensors not installed")
 
     return info
 
@@ -74,25 +146,27 @@ def dashboard(stdscr):
             stdscr.addstr(1, 2, "Use ↑/↓ to navigate, Enter to run, TAB to switch view, Q to quit")
 
             for idx, script in enumerate(scripts):
-                x = 4
                 y = idx + 3
                 if y >= height - 1:
                     break
                 if idx == current_row:
                     stdscr.attron(highlight_color)
-                    stdscr.addstr(y, x, script)
+                    stdscr.addstr(y, 4, script)
                     stdscr.attroff(highlight_color)
                 else:
-                    stdscr.addstr(y, x, script)
+                    stdscr.addstr(y, 4, script)
 
         else:  # system info mode
             stdscr.addstr(0, 2, "🖥️ CyberPatriot System Info - [Press TAB to go back]", curses.A_BOLD)
-            stdscr.addstr(1, 2, "Live system stats (top of output only)")
+            stdscr.addstr(1, 2, "Live system stats (may require sudo for full info)")
             info_lines = get_system_info()
             for idx, line in enumerate(info_lines):
                 y = idx + 3
                 if y >= height - 1:
                     break
+                # Truncate line if too long
+                if len(line) > width - 8:
+                    line = line[:width - 11] + "..."
                 stdscr.addstr(y, 4, line)
 
         stdscr.refresh()
